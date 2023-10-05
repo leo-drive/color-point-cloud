@@ -66,7 +66,15 @@ namespace color_point_cloud {
                 continue;
             }
 
-            (*transform_provider_ptr_)("CAM_F/camera_link", "lidar");
+            if (!pair.second->is_info_initialized()) {
+                RCLCPP_INFO(this->get_logger(), "Camera info is setting: %s", pair.first.c_str());
+                pair.second->set_camera_utils(pair.second->get_camera_info());
+            }
+
+            if (!pair.second->is_transform_initialized() && pair.second->is_info_initialized()) {
+                geometry_msgs::msg::TransformStamped transform = (*transform_provider_ptr_)("CAM_F/camera_link", "lidar");
+                pair.second->set_lidar_to_camera_matrix(transform);
+            }
 
             cv_bridge::CvImageConstPtr cv_ptr;
             try {
