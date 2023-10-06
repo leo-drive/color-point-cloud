@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(color_point_cloud)
 
 find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -9,9 +10,12 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(point_cloud_msg_wrapper REQUIRED)
 
 include_directories(include
     ${OpenCV_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIRS}
 )
 
 add_executable(color_point_cloud
@@ -24,10 +28,13 @@ ament_target_dependencies(color_point_cloud
         geometry_msgs
         cv_bridge
         tf2_ros
+        tf2_eigen
+        point_cloud_msg_wrapper
 )
 
 target_link_libraries(color_point_cloud
         ${OpenCV_LIBRARIES}
+        ${EIGEN3_LIBRARIES}
 )
 
 install(DIRECTORY

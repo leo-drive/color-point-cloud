@@ -14,6 +14,8 @@
 #include <geometry_msgs/msg/transform_stamped.h>
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
 
+#include <tf2_eigen/tf2_eigen.hpp>
+
 #include <Eigen/Dense>
 
 namespace color_point_cloud {
@@ -21,7 +23,7 @@ namespace color_point_cloud {
     public:
         CameraType(std::string image_topic, std::string camera_info_topic) :
                 image_topic_(std::move(image_topic)), camera_info_topic_(std::move(camera_info_topic)),
-                is_info_initialized_(false), is_transform_initialized_(false) {
+                is_info_initialized_(false), is_transform_initialized_(false), image_width_(0), image_height_(0) {
 
         }
 
@@ -41,11 +43,11 @@ namespace color_point_cloud {
             return camera_info_;
         }
 
-        bool is_info_initialized() {
+        bool is_info_initialized() const {
             return is_info_initialized_;
         }
 
-        bool is_transform_initialized() {
+        bool is_transform_initialized() const {
             return is_transform_initialized_;
         }
 
@@ -56,23 +58,44 @@ namespace color_point_cloud {
             image_width_ = msg->width;
             image_height_ = msg->height;
 
-            camera_matrix_ = Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(msg->k.data());
-            rectification_matrix_ = Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(msg->r.data());
-            projection_matrix_ = Eigen::Map<const Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>(msg->p.data());
+            camera_matrix_(0,0) = msg->k[0];
+            camera_matrix_(0,2) = msg->k[2];
+            camera_matrix_(1,1) = msg->k[4];
+            camera_matrix_(1,2) = msg->k[5];
+            camera_matrix_(2,2) = 1;
 
-            distortion_matrix_ = Eigen::Map<const Eigen::Matrix<double, 1, 5, Eigen::RowMajor>>(msg->d.data());
+            rectification_matrix_(0,0) = msg->r[0];
+            rectification_matrix_(0,1) = msg->r[1];
+            rectification_matrix_(0,2) = msg->r[2];
+            rectification_matrix_(1,0) = msg->r[3];
+            rectification_matrix_(1,1) = msg->r[4];
+            rectification_matrix_(1,2) = msg->r[5];
+            rectification_matrix_(2,0) = msg->r[6];
+            rectification_matrix_(2,1) = msg->r[7];
+            rectification_matrix_(2,2) = msg->r[8];
+
+            projection_matrix_(0,0) = msg->p[0];
+            projection_matrix_(0,2) = msg->p[2];
+            projection_matrix_(1,1) = msg->p[5];
+            projection_matrix_(1,2) = msg->p[6];
+            projection_matrix_(2,2) = 1;
+
+            distortion_matrix_(0,0) = msg->d[0];
+            distortion_matrix_(0,1) = msg->d[1];
+            distortion_matrix_(0,2) = msg->d[2];
+            distortion_matrix_(0,3) = msg->d[3];
+            distortion_matrix_(0,4) = msg->d[4];
 
             is_info_initialized_ = true;
         }
 
         void set_lidar_to_camera_matrix(geometry_msgs::msg::TransformStamped &msg) {
-            lidar_to_camera_matrix_ = Eigen::Matrix<double, 4, 4>::Identity(4, 4);
+            Eigen::Affine3d affine_lidar_to_camera_matrix = tf2::transformToEigen(msg);
 
-            Eigen::Quaterniond q(msg.transform.rotation.w, msg.transform.rotation.x, msg.transform.rotation.y, msg.transform.rotation.z);
-            lidar_to_camera_matrix_.block<3, 3>(0, 0) = q.toRotationMatrix();
-            lidar_to_camera_matrix_(0, 3) = msg.transform.translation.x;
-            lidar_to_camera_matrix_(1, 3) = msg.transform.translation.y;
-            lidar_to_camera_matrix_(2, 3) = msg.transform.translation.z;
+            lidar_to_camera_matrix_ = Eigen::Matrix4d::Identity();
+            lidar_to_camera_matrix_ = affine_lidar_to_camera_matrix.matrix();
+
+            is_transform_initialized_ = true;
         }
 
         std::string get_image_topic() {
@@ -91,11 +114,11 @@ namespace color_point_cloud {
             return distortion_model_;
         }
 
-        double get_image_width() {
+        double get_image_width() const {
             return image_width_;
         }
 
-        double get_image_height() {
+        double get_image_height() const {
             return image_height_;
         }
 
@@ -135,10 +158,10 @@ namespace color_point_cloud {
         double image_width_;
         double image_height_;
 
-        Eigen::Matrix<double, 3, 3, Eigen::RowMajor> camera_matrix_;
-        Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rectification_matrix_;
-        Eigen::Matrix<double, 3, 4, Eigen::RowMajor> projection_matrix_;
-        Eigen::Matrix<double, 1, 5, Eigen::RowMajor> distortion_matrix_;
+        Eigen::Matrix<double, 3, 3> camera_matrix_;
+        Eigen::Matrix<double, 3, 3> rectification_matrix_;
+        Eigen::Matrix<double, 3, 4> projection_matrix_;
+        Eigen::Matrix<double, 1, 5> distortion_matrix_;
 
         Eigen::Matrix4d lidar_to_camera_matrix_;
     };

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "color_point_cloud/data_type/Camera.hpp"
+#include "color_point_cloud/data_type/PointCloudType.hpp"
 #include "color_point_cloud/utils/TransformeProvider.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -30,7 +31,13 @@ namespace color_point_cloud {
     private:
         rclcpp::TimerBase::SharedPtr timer_;
 
+        rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_subscriber_;
+        rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_publisher_;
+
+
         double timeout_sec_;
+
+        std::string point_cloud_topic_;
 
         std::vector<std::string> camera_topics_;
 
@@ -40,6 +47,8 @@ namespace color_point_cloud {
         std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subscribers_;
 
         void timer_callback();
+
+        void point_cloud_callback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
 
         TransformProviderConstPtr transform_provider_ptr_;
     };

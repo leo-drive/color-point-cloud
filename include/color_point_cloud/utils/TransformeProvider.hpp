@@ -20,13 +20,14 @@ namespace color_point_cloud {
             tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
         }
 
-        geometry_msgs::msg::TransformStamped operator()(const std::string &target_frame,
+        std::optional<geometry_msgs::msg::TransformStamped> operator()(const std::string &target_frame,
                                                         const std::string &source_frame) const {
-            geometry_msgs::msg::TransformStamped transform_stamped;
+            std::optional<geometry_msgs::msg::TransformStamped> transform_stamped;
             try {
                 transform_stamped = tf_buffer_->lookupTransform(target_frame, source_frame, tf2::TimePointZero);
             } catch (tf2::TransformException &ex) {
-                RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "%s", ex.what());
+//                RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "%s", ex.what());
+                return std::nullopt;
             }
             return transform_stamped;
         }
