@@ -11,7 +11,6 @@ find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
-find_package(point_cloud_msg_wrapper REQUIRED)
 
 include_directories(include
     ${OpenCV_INCLUDE_DIRS}
@@ -29,7 +28,6 @@ ament_target_dependencies(color_point_cloud
         cv_bridge
         tf2_ros
         tf2_eigen
-        point_cloud_msg_wrapper
 )
 
 target_link_libraries(color_point_cloud

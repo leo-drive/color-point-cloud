@@ -20,6 +20,9 @@ namespace color_point_cloud {
             this->declare_parameter<std::string>("point_cloud_topic", "/points_raw");
             point_cloud_topic_ = this->get_parameter("point_cloud_topic").as_string();
 
+            this->declare_parameter<std::string>("point_cloud_frame_id", "lidar");
+            point_cloud_frame_id_ = this->get_parameter("point_cloud_frame_id").as_string();
+
             // camera_topics
             this->declare_parameter<std::vector<std::string>>("camera_topics", std::vector<std::string>());
             camera_topics_ = this->get_parameter("camera_topics").as_string_array();
@@ -32,7 +35,7 @@ namespace color_point_cloud {
         // Create camera object, create subscriber to image and camera_info
         {
             for (const auto &camera_topic: camera_topics_) {
-                std::string image_topic = camera_topic + "/image";
+                std::string image_topic = camera_topic + "/image_raw";
                 std::string camera_info_topic = camera_topic + "/camera_info";
 
                 CameraTypePtr camera_type_ptr = std::make_shared<CameraType>(image_topic, camera_info_topic);
@@ -52,6 +55,14 @@ namespace color_point_cloud {
                             camera_type_stdmap_[camera_topic]->set_camera_info(msg);
                         }));
             }
+        }
+
+        // deneme deneme deneme deneme deneme
+        {
+            sensor_msgs::msg::PointCloud2 point_cloud;
+            PointCloudXYZRGBPtr point_cloud_xyzrgb_ptr = std::make_shared<PointCloudXYZRGB>(point_cloud);
+            std::cout << "point_cloud_xyzrgb_ptr->getPointCount(): " << point_cloud_xyzrgb_ptr->getCloudSize()
+                      << std::endl;
         }
 
         {
@@ -88,7 +99,7 @@ namespace color_point_cloud {
 
             if (!pair.second->is_transform_initialized() && pair.second->is_info_initialized()) {
                 std::optional<geometry_msgs::msg::TransformStamped> transform = (*transform_provider_ptr_)(
-                        "CAM_F/camera_link", "lidar");
+                        pair.second->get_camera_frame_id(), point_cloud_frame_id_);
                 if (!transform.has_value()) {
                     continue;
                 }
@@ -111,8 +122,9 @@ namespace color_point_cloud {
     }
 
     void ColorPointCloud::point_cloud_callback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
-        RCLCPP_INFO(this->get_logger(), "Received point cloud on topic %s", point_cloud_topic_.c_str());
+//        RCLCPP_INFO(this->get_logger(), "Received point cloud on topic %s", point_cloud_topic_.c_str());
 
+        sensor_msgs::msg::PointCloud2 cloud_color_msg;
         for (const auto &pair: camera_type_stdmap_) {
             if (pair.second->get_image() == nullptr || pair.second->get_camera_info() == nullptr ||
                 !pair.second->is_info_initialized() || !pair.second->is_transform_initialized()) {
@@ -125,7 +137,6 @@ namespace color_point_cloud {
             cv_bridge::CvImageConstPtr cv_ptr;
             cv_ptr = cv_bridge::toCvShare(pair.second->get_image(), pair.second->get_image()->encoding);
 
-            sensor_msgs::msg::PointCloud2 cloud_color_msg;
             sensor_msgs::PointCloud2Modifier modifier(cloud_color_msg);
             modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
             modifier.resize(msg->width * msg->height);
@@ -153,15 +164,16 @@ namespace color_point_cloud {
                 double x = point2d_transformed_camera[0];
                 double y = point2d_transformed_camera[1];
 
-                if (x < 0 || x > pair.second->get_image_width() || y < 0 || y > pair.second->get_image_height() || point3d_transformed_camera[2] < 0) {
+                if (x < 0 || x > pair.second->get_image_width() || y < 0 || y > pair.second->get_image_height() ||
+                    point3d_transformed_camera[2] < 0) {
 
                     iter_x[0] = point.x;
                     iter_y[0] = point.y;
                     iter_z[0] = point.z;
 
-                    iter_r[0] = 0;
-                    iter_g[0] = 0;
-                    iter_b[0] = 0;
+//                    iter_r[0] = 0;
+//                    iter_g[0] = 0;
+//                    iter_b[0] = 0;
 
                 } else {
                     cv::Vec3d color = cv_ptr->image.at<cv::Vec3b>(cv::Point(x, y));
@@ -173,9 +185,9 @@ namespace color_point_cloud {
                     iter_y[0] = point.y;
                     iter_z[0] = point.z;
 
-                    iter_r[0] = color[2];
+                    iter_r[0] = color[0];
                     iter_g[0] = color[1];
-                    iter_b[0] = color[0];
+                    iter_b[0] = color[2];
                 }
 
                 ++iter_x;
@@ -187,14 +199,13 @@ namespace color_point_cloud {
 
                 cloud.nextPoint();
             }
-            cloud_color_msg.header = msg->header;
-            cloud_color_msg.height = 1;
-            cloud_color_msg.width = msg->width * msg->height;
-            point_cloud_publisher_->publish(cloud_color_msg);
-
-            cv::imshow(pair.first, cv_ptr->image);
-            cv::waitKey(1);
+//            cv::imshow(pair.first, cv_ptr->image);
+//            cv::waitKey(1);
 
         }
+        cloud_color_msg.header = msg->header;
+        cloud_color_msg.height = 1;
+        cloud_color_msg.width = msg->width * msg->height;
+        point_cloud_publisher_->publish(cloud_color_msg);
     }
 } // namespace color_point_cloud

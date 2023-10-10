@@ -6,6 +6,7 @@
 
 #include "color_point_cloud/data_type/Camera.hpp"
 #include "color_point_cloud/data_type/PointCloudType.hpp"
+#include "color_point_cloud/data_type/PointCloud2Type.hpp"
 #include "color_point_cloud/utils/TransformeProvider.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -34,10 +35,11 @@ namespace color_point_cloud {
         rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_subscriber_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_publisher_;
 
-
         double timeout_sec_;
 
         std::string point_cloud_topic_;
+
+        std::string point_cloud_frame_id_;
 
         std::vector<std::string> camera_topics_;
 

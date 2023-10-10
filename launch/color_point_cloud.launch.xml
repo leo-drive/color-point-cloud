@@ -2,12 +2,14 @@
     <arg name="param_file" default="$(find-pkg-share color_point_cloud)/config/param.yaml"/>
     <arg name="timeout_sec" default="0.1"/>
     <arg name="point_cloud_topic" default="/sensing/lidar/top/pointcloud_raw"/>
+    <arg name="point_cloud_frame_id" default="rs_helios_top"/>
     <arg name="camera_topics"
-         default="[/lucid_vision/front_camera]"/>
+         default="[/sensing/camera/camera0, /sensing/camera/camera1, /sensing/camera/camera2, /sensing/camera/camera3]"/>
 
     <node pkg="color_point_cloud" exec="color_point_cloud" name="color_point_cloud" output="screen">
         <param name="timeout_sec" value="$(var timeout_sec)"/>
         <param name="point_cloud_topic" value="$(var point_cloud_topic)"/>
+        <param name="point_cloud_frame_id" value="$(var point_cloud_frame_id)"/>
         <param name="camera_topics" value="$(var camera_topics)"/>
         <param from="$(var param_file)"/>
     </node>
