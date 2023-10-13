@@ -6,7 +6,6 @@
 
 #include "color_point_cloud/data_type/Camera.hpp"
 #include "color_point_cloud/data_type/PointCloudType.hpp"
-#include "color_point_cloud/data_type/PointCloud2Type.hpp"
 #include "color_point_cloud/utils/TransformeProvider.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -22,7 +21,6 @@
 #include "cv_bridge/cv_bridge.h"
 
 #include <opencv2/opencv.hpp>
-
 
 namespace color_point_cloud {
     class ColorPointCloud : public rclcpp::Node {
@@ -40,6 +38,12 @@ namespace color_point_cloud {
         std::string point_cloud_topic_;
 
         std::string point_cloud_frame_id_;
+
+        ImageType image_type_;
+
+        std::string image_topic_last_name_;
+
+        std::string camera_info_topic_last_name_;
 
         std::vector<std::string> camera_topics_;
 

@@ -18,6 +18,15 @@
 
 #include <Eigen/Dense>
 
+#include <opencv2/opencv.hpp>
+
+#include <cv_bridge/cv_bridge.h>
+
+enum class ImageType {
+    RAW,
+    RECTIFIED
+};
+
 namespace color_point_cloud {
     class CameraType {
     public:
@@ -27,16 +36,45 @@ namespace color_point_cloud {
 
         }
 
-        void set_image(const sensor_msgs::msg::Image::ConstSharedPtr &msg) {
-            image_ = msg;
+        void set_cv_image(const sensor_msgs::msg::Image::ConstSharedPtr &msg, ImageType image_type) {
+            cv_bridge::CvImageConstPtr cv_ptr;
+            if (image_type == ImageType::RAW) {
+                try {
+                    cv_ptr = cv_bridge::toCvShare(msg, get_image_msg()->encoding);
+                } catch (cv_bridge::Exception &e) {
+//                    RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
+                    return;
+                }
+                cv::undistort(cv_ptr->image, cv_image_, get_camera_matrix_cv(),
+                              get_distortion_matrix_cv());
+            } else if (image_type == ImageType::RECTIFIED) {
+                try {
+                    cv_ptr = cv_bridge::toCvShare(msg, get_image_msg()->encoding);
+                } catch (cv_bridge::Exception &e) {
+//                    RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
+                    return;
+                }
+                cv_image_ = cv_ptr->image;
+            } else {
+//                RCLCPP_ERROR(this->get_logger(), "Unknown image type");
+                return;
+            }
+        }
+
+        void set_image_msg(const sensor_msgs::msg::Image::ConstSharedPtr &msg) {
+            image_msg_ = msg;
         }
 
         void set_camera_info(const sensor_msgs::msg::CameraInfo::ConstSharedPtr &msg) {
             camera_info_ = msg;
         }
 
-        sensor_msgs::msg::Image::ConstSharedPtr get_image() {
-            return image_;
+        cv::Mat get_cv_image() {
+            return cv_image_;
+        }
+
+        sensor_msgs::msg::Image::ConstSharedPtr get_image_msg() {
+            return image_msg_;
         }
 
         sensor_msgs::msg::CameraInfo::ConstSharedPtr get_camera_info() {
@@ -58,33 +96,38 @@ namespace color_point_cloud {
             image_width_ = msg->width;
             image_height_ = msg->height;
 
-            camera_matrix_(0,0) = msg->k[0];
-            camera_matrix_(0,2) = msg->k[2];
-            camera_matrix_(1,1) = msg->k[4];
-            camera_matrix_(1,2) = msg->k[5];
-            camera_matrix_(2,2) = 1;
+            camera_matrix_(0, 0) = msg->k[0];
+            camera_matrix_(0, 2) = msg->k[2];
+            camera_matrix_(1, 1) = msg->k[4];
+            camera_matrix_(1, 2) = msg->k[5];
+            camera_matrix_(2, 2) = 1;
 
-            rectification_matrix_(0,0) = msg->r[0];
-            rectification_matrix_(0,1) = msg->r[1];
-            rectification_matrix_(0,2) = msg->r[2];
-            rectification_matrix_(1,0) = msg->r[3];
-            rectification_matrix_(1,1) = msg->r[4];
-            rectification_matrix_(1,2) = msg->r[5];
-            rectification_matrix_(2,0) = msg->r[6];
-            rectification_matrix_(2,1) = msg->r[7];
-            rectification_matrix_(2,2) = msg->r[8];
+            camera_matrix_cv_ = (cv::Mat_<double>(3, 3)
+                    << msg->k[0], 0.000000, msg->k[2], 0.000000, msg->k[4], msg->k[5], 0.000000, 0.000000, 1.000000);
 
-            projection_matrix_(0,0) = msg->p[0];
-            projection_matrix_(0,2) = msg->p[2];
-            projection_matrix_(1,1) = msg->p[5];
-            projection_matrix_(1,2) = msg->p[6];
-            projection_matrix_(2,2) = 1;
+            rectification_matrix_(0, 0) = msg->r[0];
+            rectification_matrix_(0, 1) = msg->r[1];
+            rectification_matrix_(0, 2) = msg->r[2];
+            rectification_matrix_(1, 0) = msg->r[3];
+            rectification_matrix_(1, 1) = msg->r[4];
+            rectification_matrix_(1, 2) = msg->r[5];
+            rectification_matrix_(2, 0) = msg->r[6];
+            rectification_matrix_(2, 1) = msg->r[7];
+            rectification_matrix_(2, 2) = msg->r[8];
 
-            distortion_matrix_(0,0) = msg->d[0];
-            distortion_matrix_(0,1) = msg->d[1];
-            distortion_matrix_(0,2) = msg->d[2];
-            distortion_matrix_(0,3) = msg->d[3];
-            distortion_matrix_(0,4) = msg->d[4];
+            projection_matrix_(0, 0) = msg->p[0];
+            projection_matrix_(0, 2) = msg->p[2];
+            projection_matrix_(1, 1) = msg->p[5];
+            projection_matrix_(1, 2) = msg->p[6];
+            projection_matrix_(2, 2) = 1;
+
+            distortion_matrix_(0, 0) = msg->d[0];
+            distortion_matrix_(0, 1) = msg->d[1];
+            distortion_matrix_(0, 2) = msg->d[3];
+            distortion_matrix_(0, 3) = msg->d[4];
+            distortion_matrix_(0, 4) = msg->d[2];
+
+            distortion_matrix_cv_ = (cv::Mat_<double>(1, 5) << msg->d[0], msg->d[1], msg->d[3], msg->d[4], msg->d[2]);
 
             is_info_initialized_ = true;
         }
@@ -126,6 +169,10 @@ namespace color_point_cloud {
             return camera_matrix_;
         }
 
+        cv::Mat get_camera_matrix_cv() {
+            return camera_matrix_cv_;
+        }
+
         Eigen::Matrix<double, 3, 3> get_rectification_matrix() {
             return rectification_matrix_;
         }
@@ -138,15 +185,23 @@ namespace color_point_cloud {
             return distortion_matrix_;
         }
 
+        cv::Mat get_distortion_matrix_cv() {
+            return distortion_matrix_cv_;
+        }
+
         Eigen::Matrix4d get_lidar_to_camera_matrix() {
             return lidar_to_camera_matrix_;
         }
+
+
 
     private:
         std::string image_topic_;
         std::string camera_info_topic_;
 
-        sensor_msgs::msg::Image::ConstSharedPtr image_;
+        cv::Mat cv_image_;
+
+        sensor_msgs::msg::Image::ConstSharedPtr image_msg_;
         sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_;
 
         bool is_info_initialized_;
@@ -162,6 +217,9 @@ namespace color_point_cloud {
         Eigen::Matrix<double, 3, 3> rectification_matrix_;
         Eigen::Matrix<double, 3, 4> projection_matrix_;
         Eigen::Matrix<double, 1, 5> distortion_matrix_;
+
+        cv::Mat camera_matrix_cv_;
+        cv::Mat distortion_matrix_cv_;
 
         Eigen::Matrix4d lidar_to_camera_matrix_;
     };
