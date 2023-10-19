@@ -141,6 +141,10 @@ namespace color_point_cloud {
             is_transform_initialized_ = true;
         }
 
+        void set_lidar_to_camera_projection_matrix() {
+            lidar_to_camera_projection_matrix_ = projection_matrix_ * lidar_to_camera_matrix_.block<4, 4>(0, 0);
+        }
+
         std::string get_image_topic() {
             return image_topic_;
         }
@@ -193,6 +197,10 @@ namespace color_point_cloud {
             return lidar_to_camera_matrix_;
         }
 
+        Eigen::Matrix<double, 3, 4> get_lidar_to_camera_projection_matrix() {
+            return lidar_to_camera_projection_matrix_;
+        }
+
 
 
     private:
@@ -222,6 +230,8 @@ namespace color_point_cloud {
         cv::Mat distortion_matrix_cv_;
 
         Eigen::Matrix4d lidar_to_camera_matrix_;
+
+        Eigen::Matrix<double, 3, 4> lidar_to_camera_projection_matrix_;
     };
 
     typedef std::shared_ptr<CameraType> CameraTypePtr;

@@ -104,6 +104,7 @@ namespace color_point_cloud {
                     continue;
                 }
                 pair.second->set_lidar_to_camera_matrix(transform.value());
+                pair.second->set_lidar_to_camera_projection_matrix();
             }
         }
     }
@@ -120,15 +121,15 @@ namespace color_point_cloud {
                                           pair.first.c_str());
                               return;
                           }
-
                           pair.second->set_cv_image(pair.second->get_image_msg(), image_type_);
 
                           sensor_msgs::PointCloud2Modifier modifier(cloud_color_msg);
-                          modifier.setPointCloud2Fields(5, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+                          modifier.setPointCloud2Fields(6, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
                                                         sensor_msgs::msg::PointField::FLOAT32, "z", 1,
                                                         sensor_msgs::msg::PointField::FLOAT32, "rgb", 1,
                                                         sensor_msgs::msg::PointField::FLOAT32, "ring", 1,
-                                                        sensor_msgs::msg::PointField::UINT16);
+                                                        sensor_msgs::msg::PointField::UINT16, "intensity", 1,
+                                                        sensor_msgs::msg::PointField::FLOAT32);
                           modifier.resize(msg->width * msg->height);
 
                           sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_color_msg, "x");
@@ -138,16 +139,16 @@ namespace color_point_cloud {
                           sensor_msgs::PointCloud2Iterator<uint8_t> iter_g(cloud_color_msg, "g");
                           sensor_msgs::PointCloud2Iterator<uint8_t> iter_b(cloud_color_msg, "b");
                           sensor_msgs::PointCloud2Iterator<uint16_t> iter_ring(cloud_color_msg, "ring");
+                          sensor_msgs::PointCloud2Iterator<float> iter_intensity(cloud_color_msg, "intensity");
 
                           pc2_combiner::PointCloudConst cloud{*msg};
                           for (size_t i = 0; i < cloud.getPointCount(); ++i) {
                               pc2_combiner::Point point{cloud.getCurrentPoint()};
 
                               Eigen::Vector4d point4d(point.x, point.y, point.z, 1.0);
-                              Eigen::Vector4d point4d_transformed = pair.second->get_lidar_to_camera_matrix() * point4d;
 
                               Eigen::Vector3d point3d_transformed_camera =
-                                      pair.second->get_projection_matrix() * point4d_transformed;
+                                      pair.second->get_lidar_to_camera_projection_matrix() * point4d;
 
                               Eigen::Vector2d point2d_transformed_camera = Eigen::Vector2d(
                                       point3d_transformed_camera[0] / point3d_transformed_camera[2],
@@ -164,17 +165,17 @@ namespace color_point_cloud {
                                   iter_y[0] = point.y;
                                   iter_z[0] = point.z;
                                   iter_ring[0] = point.ring;
+                                  iter_intensity[0] = point.intensity;
 
                               } else {
                                   cv::Vec3d color = pair.second->get_cv_image().at<cv::Vec3b>(cv::Point(x, y));
                                   cv::Scalar color_scalar(color[0], color[1], color[2]);
 
-                                  cv::circle(pair.second->get_cv_image(), cv::Point(x, y), 1, color_scalar, 1);
-
                                   iter_x[0] = point.x;
                                   iter_y[0] = point.y;
                                   iter_z[0] = point.z;
                                   iter_ring[0] = point.ring;
+                                  iter_intensity[0] = point.intensity;
 
                                   if (pair.second->get_image_msg()->encoding == "rgb8") {
                                       iter_r[0] = color[0];
@@ -197,11 +198,13 @@ namespace color_point_cloud {
                               ++iter_r;
                               ++iter_g;
                               ++iter_b;
+                              ++iter_ring;
+                              ++iter_intensity;
 
                               cloud.nextPoint();
                           }
-                          cv::imshow(pair.first, pair.second->get_cv_image());
-                          cv::waitKey(1);
+//                          cv::imshow(pair.first, pair.second->get_cv_image());
+//                          cv::waitKey(1);
                       });
 
         cloud_color_msg.header = msg->header;

@@ -1,5 +1,4 @@
 <launch>
-    <arg name="param_file" default="$(find-pkg-share color_point_cloud)/config/param.yaml"/>
     <arg name="timeout_sec" default="0.1"/>
     <arg name="point_cloud_topic" default="/sensing/lidar/top/pointcloud_raw"/>
     <arg name="point_cloud_frame_id" default="rs_helios_top"/>
