@@ -42,3 +42,26 @@ Change parameters in `color_point_cloud.launch.xml` to fit your environment.
 | `point_cloud_frame_id` | your lidar topic as `string`            |
 | `camera_topics` | array of your camera topics as `string` |
 | `image_type` | your image format `enum`                |
+
+### Result
+
+#### Projection Lucid Vision Triton 5.4 MP 120° camera onto Velodyne Alpha Prime LiDAR
+
+<p align='center'>
+    <img src="image/vls128_0.png" alt="vls-128" width="400"/>
+    <img src="image/vls128_1.png" alt="vls-128" width="400"/>
+</p>
+
+#### Projection AC-IMX390 camera onto RoboSense Helios 32 beam LiDAR
+
+<p align='center'>
+    <img src="image/robione_0.png" alt="vls-128" width="400"/>
+    <img src="image/robione_1.png" alt="vls-128" width="400"/>
+</p>
+
+#### SLAM results with LIO-SAM
+
+<p align='center'>
+    <img src="image/slam_0.png" alt="slam" width="400"/>
+    <img src="image/slam_1.png" alt="slam" width="400"/>
+</p>
