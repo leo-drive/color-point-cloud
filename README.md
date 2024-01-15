@@ -59,7 +59,7 @@ Change parameters in `color_point_cloud.launch.xml` to fit your environment.
     <img src="image/robione_1.png" alt="vls-128" width="400"/>
 </p>
 
-#### SLAM results with LIO-SAM
+#### SLAM results with LIO-SAM ([link](https://github.com/leo-drive/LIO-SAM-COLOR))
 
 <p align='center'>
     <img src="image/slam_0.png" alt="slam" width="400"/>
